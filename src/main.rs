@@ -14,8 +14,7 @@ fn curl(url: String) -> String {
     }
 }
 
-fn main() {
-    println!("Hello, world!");
+fn main() -> Result<(), json::Error> {
 
     for a in args() {
         println!("arg: {}", a);
@@ -23,10 +22,18 @@ fn main() {
             let body = curl(a);
 
             //println!("body = {:?}", body);
-            match json::parse(&body){
-                Ok(j) => println!("{:?}", j),
-                Err(e) => println!("ERROR: Not json: {:?}", e)
+            let j =  json::parse(&body).unwrap();
+            //println!("{:?}", j);
+            match j {
+                json::JsonValue::Object(o) => {
+                    for (k, v) in o.iter() {
+                        println!("{:?}: {:?}", k, v);
+                    }
+                }
+                _ => println!("j isnt an object: {:?}", j)
             }
         }
     }
+
+    Ok(())
 }
