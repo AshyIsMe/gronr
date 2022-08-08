@@ -1,37 +1,45 @@
 use std::env::args;
-use reqwest;
 
-fn curl(url: String) -> String {
-    let r = match reqwest::blocking::get(url) {
-        Ok(r) => r.text(),
-        Err(e) => Ok(String::from(""))
-    };
+fn curl(url: String) -> Result<String, reqwest::Error> {
+    reqwest::blocking::get(url)?.text()
+}
 
-    println!("{:?}", r);
-    match r {
-        Ok(t) => t,
-        Err(e) => String::from("")
+fn walk_json(path: &str, j: json::JsonValue) {
+    match j {
+        json::JsonValue::Null => println!("{}: null", path),
+        json::JsonValue::Short(s) => println!("{}: {}", path, s),
+        json::JsonValue::String(s) => println!("{}: {}", path, s),
+        json::JsonValue::Number(n) => println!("{}: {}", path, n),
+        json::JsonValue::Boolean(b) => println!("{}: {}", path, b),
+        json::JsonValue::Object(o) => {
+            for (k, v) in o.iter() {
+                let p = format!("{}.{}", path, k);
+                walk_json(&p, v.to_owned());
+            }
+        }
+        json::JsonValue::Array(a) => {
+            for (i, v) in a.iter().enumerate() {
+                let p = format!("{}[{}]", path, i);
+                walk_json(&p, v.to_owned());
+            }
+        }
     }
 }
 
 fn main() -> Result<(), json::Error> {
-
     for a in args() {
         println!("arg: {}", a);
         if a.starts_with("https:") {
-            let body = curl(a);
-
-            //println!("body = {:?}", body);
-            let j =  json::parse(&body).unwrap();
-            //println!("{:?}", j);
-            match j {
-                json::JsonValue::Object(o) => {
-                    for (k, v) in o.iter() {
-                        println!("{:?}: {:?}", k, v);
-                    }
+            let body = match curl(a) {
+                Ok(s) => s,
+                Err(e) => {
+                    println!("{}", e);
+                    String::from("")
                 }
-                _ => println!("j isnt an object: {:?}", j)
-            }
+            };
+
+            let j = json::parse(&body).unwrap();
+            walk_json("", j);
         }
     }
 
