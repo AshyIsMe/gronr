@@ -13,33 +13,23 @@ fn walk_json(path: &str, j: json::JsonValue) {
         json::JsonValue::Boolean(b) => println!("{}: {}", path, b),
         json::JsonValue::Object(o) => {
             for (k, v) in o.iter() {
-                let p = format!("{}.{}", path, k);
-                walk_json(&p, v.to_owned());
+                walk_json(&format!("{}.{}", path, k), v.to_owned());
             }
         }
         json::JsonValue::Array(a) => {
             for (i, v) in a.iter().enumerate() {
-                let p = format!("{}[{}]", path, i);
-                walk_json(&p, v.to_owned());
+                walk_json(&format!("{}[{}]", path, i), v.to_owned());
             }
         }
     }
 }
 
-fn main() -> Result<(), json::Error> {
+fn main() -> Result<(), reqwest::Error> {
     for a in args() {
         println!("arg: {}", a);
         if a.starts_with("https:") {
-            let body = match curl(a) {
-                Ok(s) => s,
-                Err(e) => {
-                    println!("{}", e);
-                    String::from("")
-                }
-            };
-
-            let j = json::parse(&body).unwrap();
-            walk_json("", j);
+            let body = curl(a)?;
+            walk_json("", json::parse(&body).unwrap());
         }
     }
 
