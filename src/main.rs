@@ -1,4 +1,5 @@
 use std::env::args;
+use std::fs;
 
 fn curl(url: String) -> Result<String, reqwest::Error> {
     reqwest::blocking::get(url)?.text()
@@ -25,11 +26,16 @@ fn walk_json(path: &str, j: json::JsonValue) {
 }
 
 fn main() -> Result<(), reqwest::Error> {
-    for a in args() {
+    for a in args().skip(1) {
         println!("arg: {}", a);
         if a.starts_with("https:") {
             let body = curl(a)?;
             walk_json("", json::parse(&body).unwrap());
+        } else {
+            match fs::read_to_string(&a) {
+                Ok(s) => walk_json("", json::parse(&s).unwrap()),
+                Err(e) => panic!("couldn't read {}: {}", a, e),
+            }
         }
     }
 
